@@ -13,7 +13,7 @@ export async function getLoginYearOptions() {
     })
   ]);
 
-  const years = availableYears.map(y => y.tahun).filter(Boolean) as string[];
+  const years = (availableYears as { tahun: string }[]).map(y => y.tahun).filter(Boolean) as string[];
   const defaultYear = settings?.tahunZakat || new Date().getFullYear().toString();
 
   if (!years.includes(defaultYear)) {
