@@ -3,6 +3,8 @@ import { SettingForm } from "@/components/setting/SettingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, Sliders, ShieldCheck, Sparkles } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const settings = await getSettings();
 
