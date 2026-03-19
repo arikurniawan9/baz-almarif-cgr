@@ -5,17 +5,17 @@ const prismaClientSingleton = () => {
   const url = process.env.DATABASE_URL;
   const isAccelerate = url?.startsWith("prisma://") || url?.startsWith("prisma+postgres://");
                        
+  const options: any = {
+    log: ['query'],
+  };
+
   if (isAccelerate) {
-    return new PrismaClient({
-      log: ['query'],
-      accelerateUrl: url,
-    });
+    options.accelerateUrl = url;
   } else {
-    return new PrismaClient({
-      log: ['query'],
-      datasourceUrl: url,
-    });
+    options.datasourceUrl = url;
   }
+
+  return new PrismaClient(options);
 }
 
 declare global {
