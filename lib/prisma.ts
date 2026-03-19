@@ -2,13 +2,20 @@
 import { PrismaClient } from '@prisma/client'
 
 const prismaClientSingleton = () => {
-  const isAccelerate = process.env.DATABASE_URL?.startsWith("prisma://") || 
-                       process.env.DATABASE_URL?.startsWith("prisma+postgres://");
+  const url = process.env.DATABASE_URL;
+  const isAccelerate = url?.startsWith("prisma://") || url?.startsWith("prisma+postgres://");
                        
-  return new PrismaClient({
-    log: ['query'],
-    ...(isAccelerate ? { accelerateUrl: process.env.DATABASE_URL } : { datasourceUrl: process.env.DATABASE_URL })
-  })
+  if (isAccelerate) {
+    return new PrismaClient({
+      log: ['query'],
+      accelerateUrl: url,
+    });
+  } else {
+    return new PrismaClient({
+      log: ['query'],
+      datasourceUrl: url,
+    });
+  }
 }
 
 declare global {
