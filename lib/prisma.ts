@@ -2,8 +2,12 @@
 import { PrismaClient } from '@prisma/client'
 
 const prismaClientSingleton = () => {
+  const isAccelerate = process.env.DATABASE_URL?.startsWith("prisma://") || 
+                       process.env.DATABASE_URL?.startsWith("prisma+postgres://");
+                       
   return new PrismaClient({
     log: ['query'],
+    ...(isAccelerate ? { accelerateUrl: process.env.DATABASE_URL } : { datasourceUrl: process.env.DATABASE_URL })
   })
 }
 
