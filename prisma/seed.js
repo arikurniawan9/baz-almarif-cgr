@@ -13,12 +13,25 @@ async function main() {
 
   console.log('Memulai proses seeding...');
 
+  // Create Wilayah (5 wilayah sesuai kebutuhan BAZ Al Ma'arif CGR)
+  const wilayahNames = ['Wilayah 1', 'Wilayah 2', 'Wilayah 3', 'Wilayah 4', 'Wilayah 5'];
+  
+  for (const nama of wilayahNames) {
+    await prisma.wilayah.upsert({
+      where: { nama },
+      update: {},
+      create: { nama },
+    });
+  }
+
+  console.log('5 Wilayah berhasil dibuat.');
+
   // Create Admin
   await prisma.user.upsert({
-    where: { username: 'admintoko' },
+    where: { username: 'adminbaz' },
     update: {},
     create: {
-      username: 'admintoko',
+      username: 'adminbaz',
       name: 'Admin Zakat Fitrah',
       password: hashedPassword,
       role: 'ADMIN',
@@ -29,17 +42,24 @@ async function main() {
   // Create default setting
   await prisma.setting.upsert({
     where: { id: 'default' },
-    update: {},
+    update: {
+      besaranBeras: 2.5,
+      besaranUang: 37500, // 15000 * 2.5
+      infakDesaDefault: 2000,
+    },
     create: {
       id: 'default',
       hargaBeras: 15000,
-      tahunZakat: '2025',
-      identitasPanitia: 'Masjid Al-Ikhlas',
+      besaranBeras: 2.5,
+      besaranUang: 37500,
+      infakDesaDefault: 2000,
+      tahunZakat: '2026',
+      identitasPanitia: 'BAZ Al Ma\'arif CGR',
     },
   });
 
   console.log('Seed data created successfully!');
-  console.log('Admin user: admintoko / password123');
+  console.log('Admin user: adminbaz / password123');
 }
 
 main()

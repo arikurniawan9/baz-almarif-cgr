@@ -18,6 +18,24 @@ enum ZakatType {
   UANG
 }
 
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  EXPORT
+}
+
+model Wilayah {
+  id        String    @id @default(cuid())
+  nama      String    @unique
+  petugas   User[]
+  muzakki   Muzakki[]
+  warga     Warga[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -26,30 +44,80 @@ model User {
   password  String?
   role      Role     @default(PETUGAS)
   active    Boolean  @default(true)
+  
+  wilayahId String?
+  wilayah   Wilayah? @relation(fields: [wilayahId], references: [id])
+  
   muzakki   Muzakki[]
+  auditLogs AuditLog[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model Warga {
+  id        String    @id @default(cuid())
+  nama      String    @default("namawarga")
+  blokRumah String    @unique // Contoh: A2 No.6
+  
+  wilayahId String
+  wilayah   Wilayah   @relation(fields: [wilayahId], references: [id])
+  
+  muzakki   Muzakki[] // Histori transaksi zakat warga ini
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
 model Muzakki {
   id           String    @id @default(cuid())
+  
+  // Kita simpan snapshot nama dan blok saat transaksi untuk integritas data
   nama         String
-  alamat       String
+  blokRumah    String
+  
+  wargaId      String?
+  warga        Warga?    @relation(fields: [wargaId], references: [id])
+  
   jumlahJiwa   Int
   jenisZakat   ZakatType
   jumlahBeras  Float     @default(0)
   jumlahUang   Float     @default(0)
+  
+  infakDesa    Float     @default(2000)
+  infakMasjid  Float     @default(0)
+  
+  wilayahId    String?
+  wilayah      Wilayah?  @relation(fields: [wilayahId], references: [id])
+  
   petugasId    String
   petugas      User      @relation(fields: [petugasId], references: [id])
+  
+  tahun        String?   // Tagging year for multi-year support
+  
   tanggal      DateTime  @default(now())
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
 
 model Setting {
-  id               String @id @default("default")
+  id               String   @id @default("default")
   hargaBeras       Float
+  besaranBeras     Float    @default(2.5) // kg per jiwa
+  besaranUang      Float    @default(0)   // Pilihan uang 1
+  besaranUang2     Float    @default(50000) // Pilihan uang 2
+  infakDesaDefault Float    @default(2000)
   tahunZakat       String
-  identitasPanitia String // JSON stored as string or just a string
+  identitasPanitia String   // JSON stored as string or just a string
   updatedAt        DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  action    ActionType
+  entity    String     // e.g., "Muzakki", "Warga", "User", "Setting"
+  entityId  String?    // ID of the affected record
+  details   String?    // JSON stringified details of the change
+  createdAt DateTime   @default(now())
 }

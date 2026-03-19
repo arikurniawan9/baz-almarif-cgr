@@ -16,6 +16,7 @@ import {
   X,
   Heart,
   ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,10 +26,12 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: Users, label: "Muzakki", href: "/muzakki" },
+  { icon: Users, label: "Data Warga", href: "/warga", adminOnly: true },
+  { icon: Heart, label: "Transaksi Zakat", href: "/muzakki" },
   { icon: UserCheck, label: "Petugas", href: "/petugas", adminOnly: true },
   { icon: FileText, label: "Rekap", href: "/laporan" },
-  { icon: Settings, label: "Pengaturan", href: "/pengaturan" },
+  { icon: ShieldAlert, label: "Audit Log", href: "/audit-log", adminOnly: true },
+  { icon: Settings, label: "Pengaturan", href: "/pengaturan", adminOnly: true },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

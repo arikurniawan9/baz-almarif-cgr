@@ -76,6 +76,19 @@
       radial-gradient(at 100% 100%, oklch(0.5 0.2 300 / 10%) 0px, transparent 50%);
     background-attachment: fixed;
   }
+
+  /* Global Cursor Pointer Implementation */
+  button, 
+  a, 
+  select,
+  label,
+  input[type="button"],
+  input[type="submit"],
+  input[type="checkbox"],
+  input[type="radio"],
+  [role="button"] {
+    cursor: pointer !important;
+  }
 }
 
 @layer components {
@@ -84,14 +97,5 @@
   }
   .glass-indigo {
     @apply bg-indigo-600/10 backdrop-blur-md border border-indigo-500/20 shadow-lg;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 }

@@ -8,11 +8,12 @@ import { useUIStore } from "@/store/ui";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const isLoading = useUIStore((state) => state.isLoading);
+  const loadingMessage = useUIStore((state) => state.loadingMessage);
 
   return (
     <SessionProvider>
       {children}
-      <LoadingOverlay isVisible={isLoading} />
+      <LoadingOverlay isVisible={isLoading} message={loadingMessage} />
       <Toaster position="top-right" richColors />
     </SessionProvider>
   );

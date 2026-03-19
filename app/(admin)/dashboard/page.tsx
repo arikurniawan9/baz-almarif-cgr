@@ -1,17 +1,26 @@
-// app/dashboard/page.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, Scale, Banknote, History, TrendingUp, Sparkles } from "lucide-react";
+import { Users, UserCheck, Scale, Banknote, History, TrendingUp, Sparkles, PieChart as PieChartIcon, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import DashboardCharts from "@/components/dashboard/DashboardCharts";
+import { DashboardDonutChart } from "@/components/dashboard/DashboardDonutChart";
+import { DashboardLeaderboard } from "@/components/dashboard/DashboardLeaderboard";
 import { Badge } from "@/components/ui/badge";
 
+import { getActiveYear } from "@/actions/auth-year";
+
 export default async function DashboardPage() {
+  const activeYear = await getActiveYear();
+
+  const whereYear = { tahun: activeYear };
+
   const stats = await prisma.muzakki.aggregate({
+    where: whereYear,
     _count: { id: true },
-    _sum: { jumlahJiwa: true, jumlahBeras: true, jumlahUang: true },
+    _sum: { jumlahJiwa: true, jumlahBeras: true, jumlahUang: true, infakDesa: true, infakMasjid: true },
   });
 
   const recentActivities = await prisma.muzakki.findMany({
+    where: whereYear,
     take: 6,
     orderBy: { createdAt: "desc" },
     include: { petugas: { select: { name: true } } },
@@ -20,13 +29,47 @@ export default async function DashboardPage() {
   const chartDataRaw = (await prisma.$queryRaw`
     SELECT DATE_TRUNC('day', "tanggal") as date, COUNT(id) as count
     FROM "Muzakki"
+    WHERE "tahun" = ${activeYear}
     GROUP BY date
     ORDER BY date ASC
     LIMIT 7
   `) as any[];
 
-  // Asumsi target tahunan (bisa disesuaikan atau diambil dari Setting nanti)
-  const targetJiwa = 1000;
+  // Data untuk Donut Chart (Beras vs Uang berdasarkan Jumlah Jiwa)
+  const berasStats = await prisma.muzakki.aggregate({
+    where: { ...whereYear, jenisZakat: "BERAS" },
+    _sum: { jumlahJiwa: true }
+  });
+  
+  const uangStats = await prisma.muzakki.aggregate({
+    where: { ...whereYear, jenisZakat: "UANG" },
+    _sum: { jumlahJiwa: true }
+  });
+
+  const donutData = [
+    { name: "Beras", value: berasStats._sum.jumlahJiwa || 0 },
+    { name: "Uang", value: uangStats._sum.jumlahJiwa || 0 }
+  ];
+
+  // Data untuk Leaderboard (Top Wilayah berdasarkan jumlah transaksi)
+  const wilayahStats = await prisma.muzakki.groupBy({
+    by: ['wilayahId'],
+    where: whereYear,
+    _count: { id: true },
+    orderBy: { _count: { id: 'desc' } },
+    take: 5,
+  });
+
+  const wilayahDetails = await prisma.wilayah.findMany({
+    where: { id: { in: wilayahStats.map(w => w.wilayahId).filter(Boolean) as string[] } },
+  });
+
+  const leaderboardData = wilayahStats.map(stat => ({
+    wilayahName: wilayahDetails.find(w => w.id === stat.wilayahId)?.nama || "Tidak diketahui",
+    count: stat._count.id
+  })).filter(w => w.wilayahName !== "Tidak diketahui");
+
+  const targetJiwa = 1000; // Bisa diatur dinamis dari Settings
   const progressJiwa = Math.min(((stats._sum.jumlahJiwa || 0) / targetJiwa) * 100, 100);
 
   return (
@@ -40,11 +83,13 @@ export default async function DashboardPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Ringkasan penerimaan zakat fitrah real-time</p>
         </div>
         <Badge variant="outline" className="w-fit bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-indigo-200 px-3 py-1 text-xs font-bold uppercase tracking-widest">
-          Tahun Zakat 2026
+          Tahun Zakat {activeYear || "-"}
         </Badge>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* --- BENTO GRID LAYOUT --- */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 grid-rows-auto">
+        
         <Card className="glass group hover:bg-white/80 dark:hover:bg-gray-900/80 transition-all duration-500 border-white/40 shadow-xl shadow-indigo-100/20 hover:-translate-y-1 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
             <Users className="h-32 w-32 -mr-10 -mt-10" />
@@ -110,10 +155,9 @@ export default async function DashboardPage() {
             <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-2">Rupiah (IDR)</p>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="glass col-span-4 border-white/40 shadow-xl shadow-indigo-100/10">
+        {/* --- MAIN CHARTS (Row 2) --- */}
+        <Card className="glass col-span-1 md:col-span-2 lg:col-span-3 border-white/40 shadow-xl shadow-indigo-100/10">
           <CardHeader className="border-b border-gray-100 dark:border-gray-800/50 bg-white/40 dark:bg-black/20 rounded-t-xl">
             <CardTitle className="text-lg font-black text-indigo-950 dark:text-white">Tren Penerimaan Harian</CardTitle>
           </CardHeader>
@@ -122,18 +166,43 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass col-span-3 border-white/40 shadow-xl shadow-indigo-100/10 flex flex-col">
+        <Card className="glass col-span-1 md:col-span-2 lg:col-span-1 border-white/40 shadow-xl shadow-indigo-100/10">
+          <CardHeader className="border-b border-gray-100 dark:border-gray-800/50 bg-white/40 dark:bg-black/20 rounded-t-xl">
+            <CardTitle className="text-sm font-black text-indigo-950 dark:text-white flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4 text-indigo-500" />
+              Sebaran Zakat (Jiwa)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 flex flex-col items-center justify-center">
+            <DashboardDonutChart data={donutData} />
+          </CardContent>
+        </Card>
+
+        {/* --- LEADERBOARD & RECENT ACTIVITY (Row 3) --- */}
+        <Card className="glass col-span-1 md:col-span-2 border-white/40 shadow-xl shadow-indigo-100/10 flex flex-col">
+          <CardHeader className="border-b border-gray-100 dark:border-gray-800/50 bg-white/40 dark:bg-black/20 rounded-t-xl">
+            <CardTitle className="text-sm font-black text-indigo-950 dark:text-white flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              Leaderboard Wilayah
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 p-0">
+            <DashboardLeaderboard data={leaderboardData} />
+          </CardContent>
+        </Card>
+
+        <Card className="glass col-span-1 md:col-span-2 border-white/40 shadow-xl shadow-indigo-100/10 flex flex-col">
           <CardHeader className="border-b border-gray-100 dark:border-gray-800/50 bg-white/40 dark:bg-black/20 rounded-t-xl">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-black text-indigo-950 dark:text-white flex items-center gap-2">
-                <History className="h-5 w-5 text-indigo-500" />
+              <CardTitle className="text-sm font-black text-indigo-950 dark:text-white flex items-center gap-2">
+                <History className="h-4 w-4 text-indigo-500" />
                 Aktivitas Terbaru
               </CardTitle>
-              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">Live</Badge>
+              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 animate-pulse">Live</Badge>
             </div>
           </CardHeader>
           <CardContent className="flex-1 p-0">
-            <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800/50 max-h-[300px] overflow-y-auto scrollbar-hide">
               {recentActivities.length === 0 ? (
                 <div className="p-8 text-center text-sm text-gray-500 font-medium">Belum ada aktivitas tercatat</div>
               ) : (
@@ -169,6 +238,7 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

@@ -11,6 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Heart, Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useUIStore } from "@/store/ui";
+import { getLoginYearOptions, setActiveYearCookie } from "@/actions/auth-year";
+import { useEffect } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -20,6 +30,18 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  
+  const [yearOptions, setYearOptions] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState("");
+
+  useEffect(() => {
+    async function fetchYears() {
+      const { years, defaultYear } = await getLoginYearOptions();
+      setYearOptions(years);
+      setSelectedYear(defaultYear);
+    }
+    fetchYears();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,10 +60,12 @@ function LoginForm() {
         });
         setIsLoading(false); // Matikan jika gagal
       } else {
+        // Set the selected year in a cookie before navigating
+        await setActiveYearCookie(selectedYear);
+        
         toast.success("Otentikasi Berhasil");
         router.push(callbackUrl);
         router.refresh();
-        // Loader akan otomatis dimatikan oleh NavigationEvents di layout dashboard
       }
     } catch (error) {
       toast.error("Terjadi kesalahan sistem");
@@ -75,6 +99,29 @@ function LoginForm() {
 
         <CardContent className="space-y-3 pt-2">
           <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="year" className="text-[10px] font-bold uppercase tracking-wider text-gray-500 ml-1">Tahun Pengelolaan</Label>
+              <div className="relative group">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger id="year" className="pl-10 h-10 bg-white/50 dark:bg-black/20 border-white/20 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold text-indigo-600">
+                    <SelectValue placeholder="Pilih Tahun" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-none shadow-2xl bg-white dark:bg-gray-900">
+                    {yearOptions.length > 0 ? (
+                      yearOptions.map((y) => (
+                        <SelectItem key={y} value={y} className="font-bold">
+                          📅 Tahun {y}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="..." disabled>Loading...</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-[10px] font-bold uppercase tracking-wider text-gray-500 ml-1">Username</Label>
               <div className="relative group">

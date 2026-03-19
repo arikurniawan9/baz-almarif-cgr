@@ -11,18 +11,26 @@ export async function getSettings() {
 }
 
 export async function updateSettings(formData: any) {
-  const { hargaBeras, tahunZakat, identitasPanitia } = formData;
+  const { hargaBeras, besaranBeras, besaranUang, besaranUang2, infakDesaDefault, tahunZakat, identitasPanitia } = formData;
 
   await prisma.setting.upsert({
     where: { id: "default" },
     update: {
       hargaBeras: parseFloat(hargaBeras),
+      besaranBeras: parseFloat(besaranBeras),
+      besaranUang: parseFloat(besaranUang),
+      besaranUang2: parseFloat(besaranUang2),
+      infakDesaDefault: parseFloat(infakDesaDefault),
       tahunZakat,
       identitasPanitia,
     },
     create: {
       id: "default",
       hargaBeras: parseFloat(hargaBeras),
+      besaranBeras: parseFloat(besaranBeras),
+      besaranUang: parseFloat(besaranUang),
+      besaranUang2: parseFloat(besaranUang2),
+      infakDesaDefault: parseFloat(infakDesaDefault),
       tahunZakat,
       identitasPanitia,
     },
